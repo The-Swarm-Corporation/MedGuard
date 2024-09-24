@@ -18,17 +18,16 @@ class Deidentifier:
 
         :param patterns: A list of regex patterns to identify sensitive data.
         """
-        if patterns is None:
-            patterns = [
-                r"\b\d{3}-\d{2}-\d{4}\b",  # SSN pattern
-                r"\b[A-Z][a-z]*\s[A-Z][a-z]*\b",  # Names pattern (simple)
-                r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",  # Email pattern
-                r"\b\d{3}-\d{3}-\d{4}\b",  # Phone number pattern
-                r"\b\d{1,2}/\d{1,2}/\d{2,4}\b",  # Date pattern (MM/DD/YYYY or MM/DD/YY)
-                r"\b\d{4}-\d{4}-\d{4}-\d{4}\b",  # Credit card number pattern
-                r"\b\d{3}-\d{4}-\d{4}-\d{4}\b",  # Credit card number pattern with dashes
-                r"\b\d{16}\b",  # Credit card number pattern without dashes
-            ]
+        patterns = [
+            r"\b\d{3}-\d{2}-\d{4}\b",  # SSN pattern
+            r"\b[A-Z][a-z]*\s[A-Z][a-z]*\b",  # Names pattern (simple)
+            r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",  # Email pattern
+            r"\b\d{3}-\d{3}-\d{4}\b",  # Phone number pattern
+            r"\b\d{1,2}/\d{1,2}/\d{2,4}\b",  # Date pattern (MM/DD/YYYY or MM/DD/YY)
+            r"\b\d{4}-\d{4}-\d{4}-\d{4}\b",  # Credit card number pattern
+            r"\b\d{3}-\d{4}-\d{4}-\d{4}\b",  # Credit card number pattern with dashes
+            r"\b\d{16}\b",  # Credit card number pattern without dashes
+        ]
         self.patterns = patterns
 
     def deidentify(self, text: str) -> str:
@@ -45,16 +44,16 @@ class Deidentifier:
         return text
 
 
-import time
+# import time
 
-# Example usage
-if __name__ == "__main__":
-    deid = Deidentifier()
-    sample_text = "John Doe's SSN is 123-45-6789 and his email is john.doe@example.com."
-    start_time = time.time()
-    clean_text = deid.deidentify(sample_text)
-    end_time = time.time()
-    print(
-        f"Deidentification completed in {end_time - start_time} seconds."
-    )
-    print(clean_text)
+# # Example usage
+# if __name__ == "__main__":
+#     deid = Deidentifier()
+#     sample_text = "John Doe's SSN is 123-45-6789 and his email is john.doe@example.com."
+#     start_time = time.time()
+#     clean_text = deid.deidentify(sample_text)
+#     end_time = time.time()
+#     print(
+#         f"Deidentification completed in {end_time - start_time} seconds."
+#     )
+#     print(clean_text)

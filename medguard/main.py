@@ -1,3 +1,4 @@
+import uuid
 from typing import List, Dict, Any
 
 from loguru import logger
@@ -6,21 +7,33 @@ from swarms import Agent
 from medguard.de_identifier import Deidentifier
 from medguard.secure_communications import SecureCommunicationAES
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import time
 from pydantic import BaseModel, Field
 
+import time
+from typing import List, Dict, Any
 
 class MedGuardInputLog(BaseModel):
-    agent_id: str
-    agent_config: Dict[Any, Any]
-    user_id: str
-    user_role: str
-    task: str
-    data_sources: str
-    output_data: str
-    timestamp: str = Field(
-        ...,
-    )
+    id: str = Field(default_factory=uuid.uuid4.hex)
+    agent_id: str = Field(default="")
+    agent_config: Dict[Any, Any] = Field(default={})
+    user_id: str = Field(default="")
+    user_role: str = Field(default="")
+    task: str = Field(default="")
+    data_sources: str = Field(default="")
+    timestamp: str = Field(default_factory=lambda: time.strftime("%Y-%m-%d %H:%M:%S"))
+
+class MedGuardInputLogs(BaseModel):
+    output: str = Field(default="")
+    timestamp: str = Field(default_factory=lambda: time.strftime("%Y-%m-%d %H:%M:%S"))
+    cleaned_task: str = Field(default="")
+    encrypted_input: str = Field(default="")
+    time: str = Field(default_factory=lambda: time.strftime("%Y-%m-%d %H:%M:%S"))
+
+class MedGuardOutputLog(BaseModel):
+    id: str = Field(default_factory=uuid.uuid4.hex)
+    input_config: MedGuardInputLog
+    outputs: List[MedGuardInputLogs] = Field(default=[])
+    time_stamp: str = Field(default_factory=lambda: time.strftime("%Y-%m-%d %H:%M:%S"))
 
 
 class MedGuard:
@@ -35,6 +48,7 @@ class MedGuard:
         agent: Agent = None,
         agents: List[Agent] = None,
         user: str = None,
+        data_sources: List[str] = None, # PDFS, CSVs, any medical data sources available
         *args,
         **kwargs,
     ):
@@ -49,11 +63,21 @@ class MedGuard:
         self.agent = agent
         self.agents = agents
         self.user = user
-        self.key = SecureCommunicationAES()
+        self.data_sources = data_sources
+        self.key = SecureCommunicationAES(roles=[self.user])
         self.deidentifer = Deidentifier()
-        logger.info(f"MedGuard initialized with agent: {agent}")
-        logger.info(
-            f"MedGuard initialized with agents: {len(agents)}"
+
+        # self.logs = MedGuardInputLog
+        self.logs = MedGuardOutputLog(
+            input_config=MedGuardInputLog(
+                agent.id,
+                agent.to_dict(),
+                user_id=uuid.uuid4.hex(),
+                user_role=user,
+                task="",
+                data_sources=data_sources,
+            ),
+            outputs=[],
         )
 
     def run_agent(self, task: str, *args, **kwargs):
@@ -62,26 +86,42 @@ class MedGuard:
 
         This method implements the actual logic to run the MedGuard instance with the configured agent(s) while adhering to HIPAA compliance guidelines.
         """
+        self.logs.input_config.task = task
+        
         logger.info(
             "Running MedGuard instance with HIPAA compliance..."
         )
 
         # De-identify sensitive information in the task before encryption
         deidentified_task = self.deidentifer.deidentify(task)
+        logger.info(f"De-identified task: {deidentified_task}")
 
         # Encrypt the de-identified task for secure transmission
         encrypted_task = self.key.encrypt(
             deidentified_task, self.user
         )
+        logger.info(f"Encrypted task: {encrypted_task}")
 
         # Decrypt the task for processing by the agent
-        decrypted_task = self.key.decrypt(encrypted_task)
+        decrypted_task = self.key.decrypt(encrypted_task, self.user)
+        logger.info(f"Decrypted task: {decrypted_task}")
 
         # Run the task with the agent
         output = self.agent.run(decrypted_task, *args, **kwargs)
+        logger.info(f"Agent output: {output}")
 
         # De-identify sensitive information in the output before returning
         deidentified_output = self.deidentifer.deidentify(output)
+        logger.info(f"De-identified output: {deidentified_output}")
+        
+        # Update the loogs
+        self.logs.outputs.append(
+            MedGuardInputLogs(
+                output = output,
+                cleaned_task=deidentified_task,
+                encrypted_input=encrypted_task,
+            )
+        )
 
         return deidentified_output
 

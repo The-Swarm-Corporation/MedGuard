@@ -17,6 +17,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+agent_workspace
 lib64/
 parts/
 .ruff_cache/
